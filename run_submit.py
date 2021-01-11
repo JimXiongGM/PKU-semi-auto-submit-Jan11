@@ -1,8 +1,11 @@
 
 import sys, os, time, platform, json, datetime
 from selenium.webdriver.chrome import webdriver
-from selenium.webdriver.support.ui import Select
-from selenium.common.exceptions import NoSuchElementException
+# from selenium.webdriver.support.ui import Select
+# from selenium.common.exceptions import NoSuchElementException
+
+from urllib.parse import quote
+from urllib import request
 
 import argparse
 
@@ -21,7 +24,7 @@ def click_by_xpath(driver, xpath):
     element = driver.find_element_by_xpath(xpath)
     driver.execute_script("arguments[0].click();", element)
 
-def remove_readonly_by_xpath(drive, xpath):
+def remove_readonly_by_xpath(driver, xpath):
     element = driver.find_element_by_xpath(xpath)
     driver.execute_script('arguments[0].removeAttribute("readonly")', element)
 
@@ -53,12 +56,12 @@ def get_in_page(driver, config):
     """
     driver.get('https://portal.pku.edu.cn/')
     time.sleep(3)
-    
+
     # 门户
     driver.find_element_by_xpath('//*[@id="user_name"]').send_keys(config["学号"])
     driver.find_element_by_xpath('//*[@id="password"]').send_keys(config["密码"])
     time.sleep(0.5)
-    
+
     # 登录
     click_by_xpath(driver, '//*[@id="logon_button"]')
     time.sleep(3)
@@ -73,7 +76,7 @@ def get_in_page(driver, config):
 
     assert driver.find_element_by_xpath('/html/body/div/section/div/div/div[2]/main/div/div[1]/div/div/div[2]').text == '出入校申请', \
         "未能进入出入校申请"
-    
+
     # 判断是否已保存
     if driver.find_element_by_xpath("/html/body/div/section/div/div/div[2]/main/div/div[2]/form/div/div[3]/div/div/div/div[1]/input").get_attribute("disabled"):
         driver.get("https://simso.pku.edu.cn/pages/sadEpiAccessApply.html#/viewEpiApplyHis")
@@ -138,7 +141,7 @@ def write_info(driver, config):
     remove_readonly_by_xpath(driver, xpath)
     driver.find_element_by_xpath(xpath).clear()
     driver.find_element_by_xpath(xpath).send_keys("北京市")
-    
+
 
     # 起点所在地级市
     # 不支持修改
@@ -201,7 +204,7 @@ def write_info(driver, config):
     # 点击保存
     driver.find_element_by_xpath('/html/body/div[2]/section/div/div/div[2]/main/div[1]/div[2]/form/div/div[17]/div/div/div/div[1]/button').click()
     time.sleep(0.5)
-    
+
     # 暂不提交
     driver.find_element_by_xpath('/html/body/div[8]/div/div[3]/button[1]').click()
 
@@ -212,7 +215,7 @@ def submit(driver, config):
     if config["提交"] == "是":
         driver.find_element_by_xpath('/html/body/div[8]/div/div[3]/button[1]').click()
 
-def get_in_history(driver, config):
+def get_in_history(driver):
     driver.get("https://simso.pku.edu.cn/pages/sadEpiAccessApply.html#/viewEpiApplyHis")
     time.sleep(2)
     # 滑动到最底
@@ -250,8 +253,8 @@ def config_check(config):
         raise ValueError("出入校事由设置有误")
     if len(config["出入校具体事项"]) > 200:
         raise ValueError("出入校具体事项过长")
-    if config["起点/终点所在区县"] not in ["东城区", "西城区", "朝阳区", "丰台区", "石景山区", 
-        "海淀区", "顺义区", "通州区", "大兴区", "房山区", "门头沟区", "昌平区", "平谷区", "密云区", "怀柔区", "延庆区"]
+    if config["起点/终点所在区县"] not in ["东城区", "西城区", "朝阳区", "丰台区", "石景山区",
+        "海淀区", "顺义区", "通州区", "大兴区", "房山区", "门头沟区", "昌平区", "平谷区", "密云区", "怀柔区", "延庆区"]:
         raise ValueError("起点/终点所在区县设置有误")
     if len(config["起点/终点所在街道"]) > 100:
         raise ValueError("起点/终点所在街道过长")
@@ -294,9 +297,8 @@ if __name__ == "__main__":
         get_in_page(driver, config)
         write_info(driver, config)
         submit(driver, config)
-        get_in_history(driver, config)
+        get_in_history(driver)
         save_screen_shot(driver)
         logout(driver)
         if config["微信通知key"]:
             wechat_notification(userName = config["学号"], sckey = config["微信通知key"])
-
