@@ -26,7 +26,7 @@ python版本：3.7+
 
 1. 设置微信通知key的方法，请参考[PKUAutoSubmit](https://github.com/Bruuuuuuce/PKUAutoSubmit)
 
-2. 本repo包含3个系统的chrome驱动，较大。可以到本项目的[码云地址](https://gitee.com/JimXiongGM/pku-semi-auto-submit-jan11)下载
+2. 本repo包含3个系统的chrome驱动，较大。若太慢可到对应的[码云仓库](https://gitee.com/JimXiongGM/pku-semi-auto-submit-jan11)下载
 
 ## 更新日志
 
