@@ -22,6 +22,8 @@ python版本：3.7+
 
 5. 检查`screen_shots`文件夹下的截图，确认提交成功
 
+**推荐用法**：将`手动上传`字段设置为`否`，程序将不会暂停。之后使用手机app上传截图。
+
 ## 特别说明
 
 1. 设置微信通知key的方法，请参考[PKUAutoSubmit](https://github.com/Bruuuuuuce/PKUAutoSubmit)

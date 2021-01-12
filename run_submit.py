@@ -86,7 +86,7 @@ def get_in_page(driver, config):
         config["history"] = True
         time.sleep(1)
     else:
-        pass
+        config["history"] = False
 
 def write_info(driver, config):
     # 出入校起点  必须使用点击
@@ -115,9 +115,16 @@ def write_info(driver, config):
         (config["出入校终点"]== "校外" and config["出入校起点"] == "大兴校区"):
         pass
     else:
-        xpath = '/html/body/div[1]/section/div/div/div[2]/main/div/div[2]/form/div/div[6]/div/div/div/div[1]/input'
-        remove_readonly_by_xpath(driver, xpath)
-        driver.find_element_by_xpath(xpath).clear()
+        # 点击下拉
+        xpath = '/html/body/div[1]/section/div/div/div[2]/main/div/div[2]/form/div/div[6]/div/div/div[1]/div/span/span/i'
+        driver.find_element_by_xpath(xpath).click()
+        time.sleep(0.5)
+        # 点击选择
+        idx = {"燕园":1, "校外":2, "大兴校区":3}
+        driver.find_element_by_xpath(f"/html/body/div[8]/div[1]/div[1]/ul/ul[3]/li[2]/ul/li[4]").click()
+        time.sleep(0.5)
+
+
         driver.find_element_by_xpath(xpath).send_keys(config["起点/终点校门"])
 
     # 出入校事由
@@ -174,7 +181,8 @@ def write_info(driver, config):
     driver.find_element_by_xpath(xpath).send_keys(config["补充说明"])
 
     # 证明材料上传
-    driver.find_element_by_xpath('/html/body/div[1]/section/div/div/div[2]/main/div/div[2]/form/div/div[13]/div/div/div/div[1]/div/button[3]').click()
+    if config["手动上传"] == "是":
+        driver.find_element_by_xpath('/html/body/div[1]/section/div/div/div[2]/main/div/div[2]/form/div/div[13]/div/div/div/div[1]/div/button[3]').click()
 
     # 证明材料上传路径 -- 手动
 
@@ -195,14 +203,15 @@ def write_info(driver, config):
         driver.find_element_by_xpath('/html/body/div[1]/section/div/div/div[2]/main/div/div[2]/form/div/div[16]/div/div/label/span[2]').click()
         time.sleep(0.5)
 
-    _input = input("\n上传附件后，输入go继续；输入exit结束程序\n")
-    while True:
-        if _input.lower() == "go": break
-        elif _input.lower() == "exit": exit()
-        else: print("输入错误")
+    if config["手动上传"] == "是":
+        _input = input("\n上传附件后，输入go继续；输入exit结束程序\n")
+        while True:
+            if _input.lower() == "go": break
+            elif _input.lower() == "exit": exit()
+            else: print("输入错误")
 
     # 点击保存
-    driver.find_element_by_xpath('/html/body/div[2]/section/div/div/div[2]/main/div[1]/div[2]/form/div/div[17]/div/div/div/div[1]/button').click()
+    driver.find_element_by_xpath('//button[contains(string(), "保存")]').click()
     time.sleep(0.5)
 
     # 暂不提交
@@ -288,7 +297,7 @@ if __name__ == "__main__":
     driver_path = get_driver_path()
 
     driver = webdriver.WebDriver(executable_path=driver_path)
-    driver.implicitly_wait(60)
+    # driver.implicitly_wait(60)
 
     # 逐个填写
     for path in configs_path:
