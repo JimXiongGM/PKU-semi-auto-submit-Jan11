@@ -30,7 +30,7 @@ def remove_readonly_by_xpath(driver, xpath):
 
 def save_screen_shot(driver):
     path = "screen_shots"
-    if not os.path.exists(path): os.makedirs(path)
+    os.makedirs(path, exist_ok=True)
     date_time = datetime.datetime.now().strftime("%Y-%m-%d_%H-%M-%S")
     driver.save_screenshot(path + f'/{date_time}.png')
 
@@ -81,15 +81,15 @@ def get_in_page(driver, config):
     if driver.find_element_by_xpath("/html/body/div/section/div/div/div[2]/main/div/div[2]/form/div/div[3]/div/div/div/div[1]/input").get_attribute("disabled"):
         driver.get("https://simso.pku.edu.cn/pages/sadEpiAccessApply.html#/viewEpiApplyHis")
         time.sleep(2)
-        # 最后一个元素
-        driver.find_element_by_xpath("/html/body/div/section/div/div/div[2]/main/div/div[2]/div[2]/div[3]/table/tbody/tr[last()]").click()
+        # 第一个未审核的元素
+        driver.find_element_by_xpath('//tr//div[contains(string(), "未审核")]').click()
         config["history"] = True
         time.sleep(1)
     else:
         config["history"] = False
 
 def write_info(driver, config):
-    # 出入校起点  必须使用点击
+    # 出入校起点 必须使用点击
     # 点击下拉
     xpath = "/html/body/div[1]/section/div/div/div[2]/main/div/div[2]/form/div/div[3]/div/div/div/div/input"
     driver.find_element_by_xpath(xpath).click()
@@ -99,7 +99,7 @@ def write_info(driver, config):
     driver.find_element_by_xpath(f"/html/body/div[2]/div[1]/div[1]/ul/li[{idx[config['出入校起点']]}]").click()
     time.sleep(0.5)
 
-    # 出入校终点  必须使用点击
+    # 出入校终点 必须使用点击
     # 点击下拉
     xpath = '/html/body/div[1]/section/div/div/div[2]/main/div/div[2]/form/div/div[4]/div/div/div/div/input'
     driver.find_element_by_xpath(xpath).click()
@@ -109,8 +109,7 @@ def write_info(driver, config):
     driver.find_element_by_xpath(f"/html/body/div[3]/div[1]/div[1]/ul/li[{idx[config['出入校终点']]}]").click()
     time.sleep(0.5)
 
-    # 起点/终点校门 大兴校区-校外 无此选项
-    #只能点击！！
+    # 起点/终点校门 必须使用点击大兴校区-校外 无此选项
     if (config["出入校起点"]== "大兴校区" and config["出入校终点"] == "校外") or \
         (config["出入校终点"]== "校外" and config["出入校起点"] == "大兴校区"):
         pass
@@ -120,48 +119,59 @@ def write_info(driver, config):
         driver.find_element_by_xpath(xpath).click()
         time.sleep(0.5)
         # 点击选择
-        idx = {"燕园":1, "校外":2, "大兴校区":3}
-        driver.find_element_by_xpath(f"/html/body/div[8]/div[1]/div[1]/ul/ul[3]/li[2]/ul/li[4]").click()
+        xpath = f'//li/span[contains(string(), "{config["起点/终点校门"]}")]'
+        click_by_xpath(driver, xpath)
         time.sleep(0.5)
 
-
-        driver.find_element_by_xpath(xpath).send_keys(config["起点/终点校门"])
-
-    # 出入校事由
+    # 出入校事由 点击
+    # 点击下拉
     xpath = '/html/body/div[1]/section/div/div/div[2]/main/div/div[2]/form/div/div[8]/div/div/div/div[1]/input'
-    remove_readonly_by_xpath(driver, xpath)
-    driver.find_element_by_xpath(xpath).clear()
-    driver.find_element_by_xpath(xpath).send_keys(config["出入校起点"])
+    driver.find_element_by_xpath(xpath).click()
+    time.sleep(0.5)
+    # 点击选择
+    xpath = f'//li/span[contains(string(), "{config["出入校事由"]}")]'
+    click_by_xpath(driver, xpath)
+    time.sleep(0.5)
 
     # 出入校具体事项
     xpath = '/html/body/div[1]/section/div/div/div[2]/main/div/div[2]/form/div/div[9]/div/div/div/textarea'
     remove_readonly_by_xpath(driver, xpath)
     driver.find_element_by_xpath(xpath).clear()
-    driver.find_element_by_xpath(xpath).send_keys(config["出入校起点"])
+    driver.find_element_by_xpath(xpath).send_keys(config["出入校具体事项"])
 
     # 起点/终点所在国家地区
     # 不支持修改
 
     # 起点/终点所在省
     # 不支持修改
+    # 点击下拉
     xpath = '/html/body/div[1]/section/div/div/div[2]/main/div/div[2]/form/div/div[10]/div[2]/div/div/div/div/input'
-    remove_readonly_by_xpath(driver, xpath)
-    driver.find_element_by_xpath(xpath).clear()
-    driver.find_element_by_xpath(xpath).send_keys("北京市")
-
+    driver.find_element_by_xpath(xpath).click()
+    time.sleep(0.5)
+    # 点击选择
+    driver.find_element_by_xpath(f'//li/span[contains(string(), "北京市")]').click()
+    time.sleep(0.5)
 
     # 起点所在地级市
     # 不支持修改
+    # 点击下拉
     xpath = '/html/body/div[1]/section/div/div/div[2]/main/div/div[2]/form/div/div[10]/div[3]/div/div/div/div[1]/input'
-    remove_readonly_by_xpath(driver, xpath)
-    driver.find_element_by_xpath(xpath).clear()
-    driver.find_element_by_xpath(xpath).send_keys("市辖区")
+    driver.find_element_by_xpath(xpath).click()
+    time.sleep(0.5)
+    # 点击选择
+    xpath = f'//li/span[contains(string(), "市辖区")]'
+    click_by_xpath(driver, xpath)
+    time.sleep(0.5)
 
     # 起点/终点所在区县
+    # 点击下拉
     xpath = '/html/body/div[1]/section/div/div/div[2]/main/div/div[2]/form/div/div[10]/div[4]/div/div/div/div/input'
-    remove_readonly_by_xpath(driver, xpath)
-    driver.find_element_by_xpath(xpath).clear()
-    driver.find_element_by_xpath(xpath).send_keys(config["起点/终点所在区县"])
+    driver.find_element_by_xpath(xpath).click()
+    time.sleep(0.5)
+    # 点击选择
+    xpath = f'//li/span[contains(string(), "{config["起点/终点所在区县"]}")]'
+    click_by_xpath(driver, xpath)
+    time.sleep(0.5)
 
     # 起点/终点所在街道
     xpath = '/html/body/div[1]/section/div/div/div[2]/main/div/div[2]/form/div/div[10]/div[5]/div/div/div/input'
@@ -181,7 +191,7 @@ def write_info(driver, config):
     driver.find_element_by_xpath(xpath).send_keys(config["补充说明"])
 
     # 证明材料上传
-    if config["手动上传"] == "是":
+    if config["程序暂停"] == "是":
         driver.find_element_by_xpath('/html/body/div[1]/section/div/div/div[2]/main/div/div[2]/form/div/div[13]/div/div/div/div[1]/div/button[3]').click()
 
     # 证明材料上传路径 -- 手动
@@ -203,7 +213,7 @@ def write_info(driver, config):
         driver.find_element_by_xpath('/html/body/div[1]/section/div/div/div[2]/main/div/div[2]/form/div/div[16]/div/div/label/span[2]').click()
         time.sleep(0.5)
 
-    if config["手动上传"] == "是":
+    if config["程序暂停"] == "是":
         _input = input("\n上传附件后，输入go继续；输入exit结束程序\n")
         while True:
             if _input.lower() == "go": break
@@ -215,14 +225,18 @@ def write_info(driver, config):
     time.sleep(0.5)
 
     # 暂不提交
-    driver.find_element_by_xpath('/html/body/div[8]/div/div[3]/button[1]').click()
+    try:
+        driver.find_element_by_xpath('//button[contains(string(), "暂不提交")]').click()
+        time.sleep(0.5)
+    except:
+        pass
 
 def submit(driver, config):
     """
     提交
     """
-    if config["提交"] == "是":
-        driver.find_element_by_xpath('/html/body/div[8]/div/div[3]/button[1]').click()
+    if config["提交"] == "是" and config["程序暂停"] == "是":
+        driver.find_element_by_xpath('//button[contains(string(), "提交")]').click()
 
 def get_in_history(driver):
     driver.get("https://simso.pku.edu.cn/pages/sadEpiAccessApply.html#/viewEpiApplyHis")
@@ -232,9 +246,9 @@ def get_in_history(driver):
     time.sleep(1)
 
 def logout(driver):
-    driver.find_element_by_xpath('/html/body/div[2]/section/header/div[1]/div[3]/div/div[2]/button').click()
+    driver.find_element_by_xpath('/html/body/div[1]/section/header/div[1]/div[3]/div/div[2]/button').click()
     time.sleep(3)
-    driver.find_element_by_xpath('//*[@id="ng-app"]/div[2]/header/section/section[1]/section[2]/ul[1]/li/a').click()
+    driver.find_elements_by_xpath('//a[contains(string(), "退出")]')[-1].click()
     time.sleep(2)
 
 # ---------------helper--------------- #
