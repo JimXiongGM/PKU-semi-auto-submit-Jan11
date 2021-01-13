@@ -4,8 +4,8 @@ config = {}
 config["学号"] = "123123"
 config["密码"] = "123123"
 
-config["出入校起点"] = "校外" # 燕园 校外 大兴校区
-config["出入校终点"] = "燕园" # 燕园 校外 大兴校区
+config["出入校起点"] = "校外" # 燕园 校外 ...
+config["出入校终点"] = "燕园" # 燕园 校外 ...
 config["起点/终点校门"] = "西南门" # 畅春园新门 东南门 南门 西门 校医院便民通道 小东门 东侧门 东门 西南门 燕园大厦门
 config["出入校事由"] = "科研" # 就业 就学 科研 就医
 config["出入校具体事项"] = "递交材料、食堂就餐" # 200字
@@ -21,6 +21,7 @@ config["邮箱"] = "123123@qq.com"
 config["手机号"] = "123123"
 config["程序暂停"] = "否"
 config["提交"] = "否"
+config["微信通知key"] = ""
 
 with open("config-example.json", "w") as f1:
     json.dump(config, f1, ensure_ascii=False, indent=4)
