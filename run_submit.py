@@ -95,8 +95,11 @@ def write_info(driver, config):
     driver.find_element_by_xpath(xpath).click()
     time.sleep(0.5)
     # 点击选择
-    idx = {"燕园":1, "校外":2, "大兴校区":3}
-    driver.find_element_by_xpath(f"/html/body/div[2]/div[1]/div[1]/ul/li[{idx[config['出入校起点']]}]").click()
+#     idx = {"燕园":1, "校外":2, "大兴校区":3} 
+    tmp = config['出入校起点']
+    xpath = f'/html/body/div[2]/div[1]/div[1]/ul//li[contains(string(), "{tmp}")]'
+    click_by_xpath(driver, xpath)
+#     driver.find_element_by_xpath(f"/html/body/div[2]/div[1]/div[1]/ul/li[{idx[config['出入校起点']]}]").click()
     time.sleep(0.5)
 
     # 出入校终点 必须使用点击
@@ -105,11 +108,14 @@ def write_info(driver, config):
     driver.find_element_by_xpath(xpath).click()
     time.sleep(0.5)
     # 点击选择
-    idx = {"燕园":1, "校外":2, "大兴校区":3}
-    driver.find_element_by_xpath(f"/html/body/div[3]/div[1]/div[1]/ul/li[{idx[config['出入校终点']]}]").click()
+#     idx = {"燕园":1, "校外":2, "大兴校区":3}
+    tmp = config['出入校终点']
+    xpath = f'/html/body/div[3]/div[1]/div[1]/ul//li[contains(string(), "{tmp}")]'
+    click_by_xpath(driver, xpath)
+#     driver.find_element_by_xpath(f"/html/body/div[3]/div[1]/div[1]/ul/li[{idx[config['出入校终点']]}]").click()
     time.sleep(0.5)
 
-    # 起点/终点校门 必须使用点击大兴校区-校外 无此选项
+    # 起点/终点校门 必须使用点击 大兴校区-校外 无此选项
     if (config["出入校起点"]== "大兴校区" and config["出入校终点"] == "校外") or \
         (config["出入校终点"]== "校外" and config["出入校起点"] == "大兴校区"):
         pass
@@ -264,10 +270,10 @@ def config_check(config):
     """
     配置检查
     """
-    if config["出入校起点"] not in ["燕园", "校外", "大兴校区"]:
-        raise ValueError("起点设置有误")
-    if config["出入校终点"] not in ["燕园", "校外", "大兴校区"]:
-        raise ValueError("终点设置有误")
+#     if config["出入校起点"] not in ["燕园", "校外", "大兴校区"]:
+#         raise ValueError("起点设置有误")
+#     if config["出入校终点"] not in ["燕园", "校外", "大兴校区"]:
+#         raise ValueError("终点设置有误")
     if config["出入校起点"] == config["出入校终点"]:
         raise ValueError("起点和终点不能一样")
     if config["起点/终点校门"] not in ["畅春园新门", "东南门", "南门", "西门", "校医院便民通道", "小东门", "东侧门", "东门", "西南门", "燕园大厦门"]:
