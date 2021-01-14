@@ -34,14 +34,19 @@ def save_screen_shot(driver):
     date_time = datetime.datetime.now().strftime("%Y-%m-%d_%H-%M-%S")
     driver.save_screenshot(path + f'/{date_time}.png')
 
-def wechat_notification(userName, sckey):
+def wechat_notification(userName, sckey, state):
     """
     copy from https://github.com/Bruuuuuuce/PKUAutoSubmit
     """
-    with request.urlopen(
-            quote('https://sc.ftqq.com/' + sckey + '.send?text=成功提交申请&desp=学号' +
-                  str(userName) + '成功提交申请',
-                  safe='/:?=&')) as response:
+    if state == "已保存":
+        state_info = "已经保存，记得及时提交！"
+    elif state == "已提交":
+        state_info = "已经提交，请检查提交记录！"
+    else:
+        raise ValueError(f"state错误：{state}")
+
+    url_text = f'https://sc.ftqq.com/{sckey}.send?text={state_info}&desp=学号{userName}成功提交申请'
+    with request.urlopen(quote(url_text, safe='/:?=&')) as response:
         response = json.loads(response.read().decode('utf-8'))
     if response['errmsg'] == 'success':
         print('微信通知成功！')
@@ -95,11 +100,9 @@ def write_info(driver, config):
     driver.find_element_by_xpath(xpath).click()
     time.sleep(0.5)
     # 点击选择
-#     idx = {"燕园":1, "校外":2, "大兴校区":3} 
     tmp = config['出入校起点']
     xpath = f'/html/body/div[2]/div[1]/div[1]/ul//li[contains(string(), "{tmp}")]'
     click_by_xpath(driver, xpath)
-#     driver.find_element_by_xpath(f"/html/body/div[2]/div[1]/div[1]/ul/li[{idx[config['出入校起点']]}]").click()
     time.sleep(0.5)
 
     # 出入校终点 必须使用点击
@@ -108,11 +111,9 @@ def write_info(driver, config):
     driver.find_element_by_xpath(xpath).click()
     time.sleep(0.5)
     # 点击选择
-#     idx = {"燕园":1, "校外":2, "大兴校区":3}
     tmp = config['出入校终点']
     xpath = f'/html/body/div[3]/div[1]/div[1]/ul//li[contains(string(), "{tmp}")]'
     click_by_xpath(driver, xpath)
-#     driver.find_element_by_xpath(f"/html/body/div[3]/div[1]/div[1]/ul/li[{idx[config['出入校终点']]}]").click()
     time.sleep(0.5)
 
     # 起点/终点校门 必须使用点击 大兴校区-校外 无此选项
@@ -220,19 +221,25 @@ def write_info(driver, config):
         time.sleep(0.5)
 
     if config["程序暂停"] == "是":
-        _input = input("\n上传附件后，输入go继续；输入exit结束程序\n")
+        print("\n上传附件后，输入go继续；输入exit结束程序，请在1分钟内上传附件")
         while True:
+            _input = input()
             if _input.lower() == "go": break
             elif _input.lower() == "exit": exit()
             else: print("输入错误")
-
+    
+    print("程序继续")
     # 点击保存
     driver.find_element_by_xpath('//button[contains(string(), "保存")]').click()
     time.sleep(0.5)
+    config["state"] = "已保存"
 
     # 暂不提交
     try:
+        # 若历史页面且无需保存，这里不会出现弹窗，触发implicitly_wait
+        driver.implicitly_wait(3)
         driver.find_element_by_xpath('//button[contains(string(), "暂不提交")]').click()
+        driver.implicitly_wait(10)
         time.sleep(0.5)
     except:
         pass
@@ -243,6 +250,10 @@ def submit(driver, config):
     """
     if config["提交"] == "是" and config["程序暂停"] == "是":
         driver.find_element_by_xpath('//button[contains(string(), "提交")]').click()
+        time.sleep(0.3)
+        driver.find_element_by_xpath('//button[contains(string(), "确定")]').click()
+        time.sleep(0.3)
+        config["state"] = "已提交"        
 
 def get_in_history(driver):
     driver.get("https://simso.pku.edu.cn/pages/sadEpiAccessApply.html#/viewEpiApplyHis")
@@ -262,7 +273,6 @@ def logout(driver):
 def make_args():
     parser = argparse.ArgumentParser()
     parser.add_argument("--configs", required=True, nargs='+', type=str, help="config.json文件列表",)
-    parser.add_argument("--history", type=bool, default=False, help="config.json文件列表",)
     args = parser.parse_args()
     return args
 
@@ -270,10 +280,10 @@ def config_check(config):
     """
     配置检查
     """
-#     if config["出入校起点"] not in ["燕园", "校外", "大兴校区"]:
-#         raise ValueError("起点设置有误")
-#     if config["出入校终点"] not in ["燕园", "校外", "大兴校区"]:
-#         raise ValueError("终点设置有误")
+    # if config["出入校起点"] not in ["燕园", "校外", "大兴校区"]:
+    #     raise ValueError("起点设置有误")
+    # if config["出入校终点"] not in ["燕园", "校外", "大兴校区"]:
+    #     raise ValueError("终点设置有误")
     if config["出入校起点"] == config["出入校终点"]:
         raise ValueError("起点和终点不能一样")
     if config["起点/终点校门"] not in ["畅春园新门", "东南门", "南门", "西门", "校医院便民通道", "小东门", "东侧门", "东门", "西南门", "燕园大厦门"]:
@@ -305,7 +315,7 @@ def get_driver_path():
     elif plat_info.startswith("Windows"):
         driver_path = "chromedrivers/chromedriver_win32/chromedriver.exe"
     else:
-        raise Exception("不支持平台")
+        raise Exception(f"不支持平台: {plat_info}")
     return driver_path
 
 if __name__ == "__main__":
@@ -317,7 +327,7 @@ if __name__ == "__main__":
     driver_path = get_driver_path()
 
     driver = webdriver.WebDriver(executable_path=driver_path)
-    # driver.implicitly_wait(60)
+    driver.implicitly_wait(60)
 
     # 逐个填写
     for path in configs_path:
@@ -330,4 +340,6 @@ if __name__ == "__main__":
         save_screen_shot(driver)
         logout(driver)
         if config["微信通知key"]:
-            wechat_notification(userName = config["学号"], sckey = config["微信通知key"])
+            wechat_notification(userName = config["学号"], sckey = config["微信通知key"], state = config["state"])
+    
+    print("完成，感谢您的使用")
