@@ -22,11 +22,11 @@ python版本：3.7+
 
 5. 检查`screen_shots`文件夹下的截图，确认提交成功
 
-**推荐用法**：将`程序暂停`字段设置为`否`，程序将自动填写保存除证明材料之外的字段，不会暂停、不会提交。之后需使用手机app上传证明材料。
+**推荐用法**：将`程序暂停`字段设置为`否`，程序将自动填写保存除证明材料之外的字段，不会暂停、不会提交。之后需自行上传证明材料并提交。
 
 ## 特别说明
 
-1. 设置微信通知key的方法，请参考[PKUAutoSubmit](https://github.com/Bruuuuuuce/PKUAutoSubmit)
+1. 设置`微信通知key`的方法，请参考[PKUAutoSubmit](https://github.com/Bruuuuuuce/PKUAutoSubmit)
 
 2. 本repo包含3个系统的chrome驱动，较大。若太慢可到对应的[码云仓库](https://gitee.com/JimXiongGM/pku-semi-auto-submit-jan11)下载
 
@@ -52,7 +52,8 @@ config["补充说明"] = "暂无" # 200字
 config["证明材料上传"] = "北京健康宝" # 若要增加多个材料，需要手动增加
 config["邮箱"] = "123@qq.com"
 config["手机号"] = "123"
-config["提交"] = "是" # 是 否
+config["程序暂停"] = "否" # 是 否
+config["提交"] = "否" # 是 否
 config["微信通知key"] = ""
 ```
 
