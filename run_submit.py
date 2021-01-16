@@ -17,11 +17,15 @@ def _switch_to_frame(driver):
     data_frame = driver.find_element_by_xpath('//*[@id="explorer_properties_content"]')
     driver.switch_to.frame(data_frame)
 
-def click_by_xpath(driver, xpath):
+def click_by_xpath(driver, xpath, choose_last=False):
     """
     默认的 click 方法有的时候会失效
+    下拉列表出现时，只有最后的xpath是有效的
     """
-    element = driver.find_element_by_xpath(xpath)
+    if choose_last:
+        element = driver.find_elements_by_xpath(xpath)[-1]
+    else:
+        element = driver.find_element_by_xpath(xpath)
     driver.execute_script("arguments[0].click();", element)
 
 def remove_readonly_by_xpath(driver, xpath):
@@ -83,144 +87,116 @@ def get_in_page(driver, config):
         "未能进入出入校申请"
 
     # 判断是否已保存
-    if driver.find_element_by_xpath("/html/body/div/section/div/div/div[2]/main/div/div[2]/form/div/div[3]/div/div/div/div[1]/input").get_attribute("disabled"):
-        driver.get("https://simso.pku.edu.cn/pages/sadEpiAccessApply.html#/viewEpiApplyHis")
-        time.sleep(2)
-        # 第一个未审核的元素
-        driver.find_element_by_xpath('//tr//div[contains(string(), "未审核")]').click()
-        config["history"] = True
+    if driver.find_element_by_xpath('//input[@placeholder="选择日期"]').get_attribute("disabled"):
+        # 返回
+        xpath = '//div[@class="el-page-header__title"][contains(string(), "返回")]'
+        driver.find_element_by_xpath(xpath).click()
         time.sleep(1)
+        
+        # 点击 申请历史
+        xpath = '//span[contains(string(), "申请历史")]'
+        driver.find_element_by_xpath(xpath).click()
+        time.sleep(1)
+
+        # 第一个未审核的元素
+        xpath = '//tr//div[contains(string(), "未审核")]'
+        click_by_xpath(driver, xpath)
+        time.sleep(1)
+
+        config["history"] = True
     else:
         config["history"] = False
 
+def find_div_by_name(driver, name):
+    """
+    根据label的text，找到下一个兄弟div节点
+    """
+    xpath = f'/html/body//form//label[contains(string(), "{name}")]/following-sibling::div[1]'
+    div = driver.find_element_by_xpath(xpath)
+    return div
+
+def find_textarea_by_name(driver, name):
+    """
+    根据label的text，找到下一个兄弟div节点下的textarea
+    """
+    div = find_div_by_name(driver, name)
+    textarea = div.find_element_by_xpath(".//textarea")
+    return textarea
+
+def find_input_by_name(driver, name):
+    """
+    根据label的text，找到下一个兄弟div节点下的input
+    """
+    div = find_div_by_name(driver, name)
+    _input = div.find_element_by_xpath(".//input")
+    return _input
+
+def click_element_in_drop_by_name(driver, name, value):
+    """
+    点击-选择元素。下拉列表的xpath都是 /html/body/div[5]
+    """
+    # 点击
+    find_div_by_name(driver, name).click()
+    time.sleep(0.5)
+    # 选择
+    xpath = f'/html/body//li[contains(string(), "{value}")]'
+    click_by_xpath(driver, xpath, choose_last=True)
+    time.sleep(0.5)
+
 def write_info(driver, config):
-    # 出入校起点 必须使用点击
-    # 点击下拉
-    xpath = "/html/body/div[1]/section/div/div/div[2]/main/div/div[2]/form/div/div[3]/div/div/div/div/input"
-    driver.find_element_by_xpath(xpath).click()
-    time.sleep(0.5)
-    # 点击选择
-    tmp = config['出入校起点']
-    xpath = f'/html/body/div[2]/div[1]/div[1]/ul//li[contains(string(), "{tmp}")]'
-    click_by_xpath(driver, xpath)
-    time.sleep(0.5)
 
-    # 出入校终点 必须使用点击
-    # 点击下拉
-    xpath = '/html/body/div[1]/section/div/div/div[2]/main/div/div[2]/form/div/div[4]/div/div/div/div/input'
-    driver.find_element_by_xpath(xpath).click()
-    time.sleep(0.5)
-    # 点击选择
-    tmp = config['出入校终点']
-    xpath = f'/html/body/div[3]/div[1]/div[1]/ul//li[contains(string(), "{tmp}")]'
-    click_by_xpath(driver, xpath)
-    time.sleep(0.5)
+    # 先填写 下拉-点击 。不存在的字段跳过
+    driver.implicitly_wait(0.5)
+    for name in ["出入校起点", "出入校终点", "起点校门", "终点校门", "出入校事由",
+                "起点所在省", "起点所在地级市", "起点所在区县",
+                "终点所在省", "终点所在地级市", "终点所在区县",
+                "宿舍园区",]:
+        try:
+            if name in ["终点校门", "起点校门"]:
+                value = config["起点/终点校门"]
+            elif name in ["起点所在省", "终点所在省"]:
+                value = "北京市"
+            elif name in ["起点所在地级市", "终点所在地级市"]:
+                value = "市辖区"
+            elif name in ["起点所在区县", "终点所在区县"]:
+                value = "海淀区"
+            else:
+                value = config[name]
+            click_element_in_drop_by_name(driver, name, value)
+        except Exception as e:
+            print(f"找不到：{name}")
+    
+    # input字段
+    for name in ["起点所在街道", "终点所在街道", "邮箱", "手机号", "宿舍楼", "宿舍房间号",]:
+        try:
+            if name in ["起点所在街道", "终点所在街道",]:
+                value = config["起点/终点所在街道"]
+            else:
+                value = config[name]
 
-    # 起点/终点校门 必须使用点击 大兴校区-校外 无此选项
-    if (config["出入校起点"]== "大兴校区" and config["出入校终点"] == "校外") or \
-        (config["出入校终点"]== "校外" and config["出入校起点"] == "大兴校区"):
-        pass
-    else:
-        # 点击下拉
-        xpath = '/html/body/div[1]/section/div/div/div[2]/main/div/div[2]/form/div/div[6]/div/div/div[1]/div/span/span/i'
-        driver.find_element_by_xpath(xpath).click()
-        time.sleep(0.5)
-        # 点击选择
-        xpath = f'//li/span[contains(string(), "{config["起点/终点校门"]}")]'
-        click_by_xpath(driver, xpath)
-        time.sleep(0.5)
+            if name in ["宿舍楼", "宿舍房间号"] and config["宿舍园区"] == "无宿舍": continue
 
-    # 出入校事由 点击
-    # 点击下拉
-    xpath = '/html/body/div[1]/section/div/div/div[2]/main/div/div[2]/form/div/div[8]/div/div/div/div[1]/input'
-    driver.find_element_by_xpath(xpath).click()
-    time.sleep(0.5)
-    # 点击选择
-    xpath = f'//li/span[contains(string(), "{config["出入校事由"]}")]'
-    click_by_xpath(driver, xpath)
-    time.sleep(0.5)
+            _input = find_input_by_name(driver, name)
+            _input.clear()
+            _input.send_keys(value)
+        except Exception as e:
+            print(f"找不到：{name}")
 
-    # 出入校具体事项
-    xpath = '/html/body/div[1]/section/div/div/div[2]/main/div/div[2]/form/div/div[9]/div/div/div/textarea'
-    remove_readonly_by_xpath(driver, xpath)
-    driver.find_element_by_xpath(xpath).clear()
-    driver.find_element_by_xpath(xpath).send_keys(config["出入校具体事项"])
+    # textarea字段
+    for name in ["出入校具体事项", "基本轨迹", "补充说明",]:
+        try:
+            value = config[name]
+            textarea = find_textarea_by_name(driver, name)
+            textarea.clear()
+            textarea.send_keys(value)
+        except Exception as e:
+            print(f"找不到：{name}")
 
-    # 起点/终点所在国家地区
-    # 不支持修改
-
-    # 起点/终点所在省
-    # 不支持修改
-    # 点击下拉
-    xpath = '/html/body/div[1]/section/div/div/div[2]/main/div/div[2]/form/div/div[10]/div[2]/div/div/div/div/input'
-    driver.find_element_by_xpath(xpath).click()
-    time.sleep(0.5)
-    # 点击选择
-    driver.find_element_by_xpath(f'//li/span[contains(string(), "北京市")]').click()
-    time.sleep(0.5)
-
-    # 起点所在地级市
-    # 不支持修改
-    # 点击下拉
-    xpath = '/html/body/div[1]/section/div/div/div[2]/main/div/div[2]/form/div/div[10]/div[3]/div/div/div/div[1]/input'
-    driver.find_element_by_xpath(xpath).click()
-    time.sleep(0.5)
-    # 点击选择
-    xpath = f'//li/span[contains(string(), "市辖区")]'
-    click_by_xpath(driver, xpath)
-    time.sleep(0.5)
-
-    # 起点/终点所在区县
-    # 点击下拉
-    xpath = '/html/body/div[1]/section/div/div/div[2]/main/div/div[2]/form/div/div[10]/div[4]/div/div/div/div/input'
-    driver.find_element_by_xpath(xpath).click()
-    time.sleep(0.5)
-    # 点击选择
-    xpath = f'//li/span[contains(string(), "{config["起点/终点所在区县"]}")]'
-    click_by_xpath(driver, xpath)
-    time.sleep(0.5)
-
-    # 起点/终点所在街道
-    xpath = '/html/body/div[1]/section/div/div/div[2]/main/div/div[2]/form/div/div[10]/div[5]/div/div/div/input'
-    driver.find_element_by_xpath(xpath).clear()
-    driver.find_element_by_xpath(xpath).send_keys(config["起点/终点所在街道"])
-
-    # 基本轨迹
-    xpath = '/html/body/div[1]/section/div/div/div[2]/main/div/div[2]/form/div/div[11]/div/div/div[1]/textarea'
-    remove_readonly_by_xpath(driver, xpath)
-    driver.find_element_by_xpath(xpath).clear()
-    driver.find_element_by_xpath(xpath).send_keys(config["基本轨迹"])
-
-    # 补充说明
-    xpath = '/html/body/div[1]/section/div/div/div[2]/main/div/div[2]/form/div/div[12]/div/div/div/textarea'
-    remove_readonly_by_xpath(driver, xpath)
-    driver.find_element_by_xpath(xpath).clear()
-    driver.find_element_by_xpath(xpath).send_keys(config["补充说明"])
 
     # 证明材料上传
     if config["程序暂停"] == "是":
-        driver.find_element_by_xpath('/html/body/div[1]/section/div/div/div[2]/main/div/div[2]/form/div/div[13]/div/div/div/div[1]/div/button[3]').click()
-
-    # 证明材料上传路径 -- 手动
-
-    # 邮箱
-    xpath = '/html/body/div[1]/section/div/div/div[2]/main/div[1]/div[2]/form/div/div[14]/div/div/div/input'
-    remove_readonly_by_xpath(driver, xpath)
-    driver.find_element_by_xpath(xpath).clear()
-    driver.find_element_by_xpath(xpath).send_keys(config["邮箱"])
-
-    # 手机号
-    xpath = '/html/body/div[1]/section/div/div/div[2]/main/div[1]/div[2]/form/div/div[15]/div/div/div/input'
-    remove_readonly_by_xpath(driver, xpath)
-    driver.find_element_by_xpath(xpath).clear()
-    driver.find_element_by_xpath(xpath).send_keys(config["手机号"])
-
-    # 勾选已读 已经保存则不能勾选
-    if not config["history"]:
-        driver.find_element_by_xpath('/html/body/div[1]/section/div/div/div[2]/main/div/div[2]/form/div/div[16]/div/div/label/span[2]').click()
-        time.sleep(0.5)
-
-    if config["程序暂停"] == "是":
+        driver.implicitly_wait(60)
+        driver.find_element_by_xpath(f'//form//button[contains(string(), "{config["证明材料上传"]}")]').click()
         print("\n上传附件后，输入go继续；输入exit结束程序，请在1分钟内上传附件")
         while True:
             _input = input()
@@ -229,6 +205,12 @@ def write_info(driver, config):
             else: print("输入错误")
     
     print("程序继续")
+
+    # 勾选已读 已经保存则不能勾选
+    if not config["history"]:
+        driver.find_element_by_xpath('//form//label[contains(string(), "本人承诺遵守")]').click()
+        time.sleep(0.5)
+
     # 点击保存
     driver.find_element_by_xpath('//button[contains(string(), "保存")]').click()
     time.sleep(0.5)
@@ -241,7 +223,7 @@ def write_info(driver, config):
         driver.find_element_by_xpath('//button[contains(string(), "暂不提交")]').click()
         driver.implicitly_wait(10)
         time.sleep(0.5)
-    except:
+    except Exception as e:
         pass
 
 def submit(driver, config):
@@ -253,14 +235,14 @@ def submit(driver, config):
         time.sleep(0.3)
         driver.find_element_by_xpath('//button[contains(string(), "确定")]').click()
         time.sleep(0.3)
-        config["state"] = "已提交"        
+        config["state"] = "已提交"
 
 def get_in_history(driver):
-    driver.get("https://simso.pku.edu.cn/pages/sadEpiAccessApply.html#/viewEpiApplyHis")
-    time.sleep(2)
+    xpath = '//div[@class="el-page-header__title"][contains(string(), "返回")]'
+    driver.find_element_by_xpath(xpath).click()
+    time.sleep(1)
     # 滑动到最底
     driver.execute_script("window.scrollBy(0,8000)")
-    time.sleep(1)
 
 def logout(driver):
     driver.find_element_by_xpath('/html/body/div[1]/section/header/div[1]/div[3]/div/div[2]/button').click()
@@ -303,6 +285,8 @@ def config_check(config):
         raise ValueError("补充说明过长")
     if config["证明材料上传"] not in ["导师同意书", "核酸检测证明", "北京健康宝", "通行大数据行程卡", "其他材料"]:
         raise ValueError("证明材料上传设置有误")
+    if config["宿舍园区"] not in ["燕园", "万柳园区", "圆明园校区", "畅春园", "中关新园", "大兴校区", "医学部", "昌平校区", "无宿舍"]:
+        raise ValueError("宿舍园区设置有误")
     if config["提交"] not in ["是", "否"]:
         raise ValueError("提交设置有误")
 
@@ -327,7 +311,7 @@ if __name__ == "__main__":
     driver_path = get_driver_path()
 
     driver = webdriver.WebDriver(executable_path=driver_path)
-    driver.implicitly_wait(60)
+    # driver.implicitly_wait(60)
 
     # 逐个填写
     for path in configs_path:
